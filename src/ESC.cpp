@@ -2,8 +2,9 @@
 
 int ESC::channel_next_free = 0;
 
-ESC::ESC() {
+ESC::ESC(int pin) {
     _resetFields();
+    ESC::attach(pin);
 };
 
 bool ESC::attach(int pin, int channel, 

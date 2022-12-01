@@ -31,7 +31,8 @@ public:
      *
      * The new instance will not be attached to any pin.
      */
-    ESC();
+    
+    ESC(int);
 
      /**
      * @brief Associate this instance with a esc whose input is
