@@ -1,5 +1,7 @@
-#pragma once
+#ifndef ESC_H
+#define ESC_H
 
+#pragma once
 #include "Arduino.h"
 
 class ESC {
@@ -116,3 +118,5 @@ private:
     int _minPulseWidth, _maxPulseWidth;
     int _minSpeed, _maxSpeed;
 };
+
+#endif
