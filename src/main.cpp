@@ -4,10 +4,10 @@
 #include <Voltage_Sensor.h>
 #include <Tachometer.h>
 
-ESC motor1(12);
-ESC motor2(13);
-ESC motor3(14);
-ESC motor4(15);
+ESC motor1(1);
+ESC motor2(1);
+ESC motor3(1);
+ESC motor4(1);
 
 ACS712 acs1(1,1,1);
 ACS712 acs2(1,1,1);
@@ -23,5 +23,6 @@ void setup() {
 }
 
 void loop() {
+    
     
 }
