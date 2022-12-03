@@ -7,14 +7,14 @@
 class ACS712{
 
 public:
-    ACS712(int pin, int slope, int offset);
+    ACS712(int pin, double slope, double offset);
 
     double getCurrent();
 
 private:
     int _pin;
-    int _slope;
-    int _offset;
+    double _slope;
+    double _offset;
 
 };
 
