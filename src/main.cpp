@@ -47,6 +47,8 @@
 #define MotorPin3 12
 #define MotorPin4 13
 
+//I2C Addresses
+
 #define MPU6050Address 0x68
 
 #define HMC5883LAddress 0x7E
