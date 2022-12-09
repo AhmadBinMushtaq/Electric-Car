@@ -4,6 +4,8 @@
 #include <Voltage_Sensor.h>
 #include <GPS.h>
 
+// Pin Definitions
+
 #define RXPin1 19
 #define RXPin2 18
 #define RXPin3 5
