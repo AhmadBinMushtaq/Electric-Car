@@ -7,6 +7,10 @@ ESC::ESC(int pin) {
     ESC::attach(pin);
 };
 
+ESC::ESC() {
+    _resetFields();
+};
+
 bool ESC::attach(int pin, int channel, 
                    int minSpeed, int maxSpeed, 
                    int minPulseWidth, int maxPulseWidth) 

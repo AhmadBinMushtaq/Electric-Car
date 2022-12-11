@@ -33,6 +33,7 @@ public:
      */
     
     ESC(int);
+    ESC();
 
      /**
      * @brief Associate this instance with a esc whose input is
