@@ -6,41 +6,38 @@
 
 // Pin Definitions
 
-#define RXPin1 19
-#define RXPin2 18
+#define RXPin1 2
+#define RXPin2 4
 #define RXPin3 5
-#define RXPin4 4
-#define RXPin5 2
+#define RXPin4 18
+#define RXPin5 19
 
-#define VoltmeterPin 15
+#define VoltmeterPin 23
 #define MaxVoltage 25
 
-#define SteeringPin 23
+#define SteeringPin 15
 
-#define ACS1Pin 36
+#define ACS1Pin 35
 #define ACS1Slope 9.04405
 #define ACS1Offset -14.3177
 
-#define ACS2Pin 39
+#define ACS2Pin 34
 #define ACS2Slope 9.04405
 #define ACS2Offset -15.3177
 
-#define ACS3Pin 34
+#define ACS3Pin 26
 #define ACS3Slope 9.04405
-#define ACS3Offset -14.3177
+#define ACS3Offset -14.8177
 
-#define ACS4Pin 35
+#define ACS4Pin 25
 #define ACS4Slope 9.04405
-#define ACS4Offset -15.3177
+#define ACS4Offset -6.8177
 
 #define BrakePin 32
 
 #define SpeedometerPin 33
 #define Circumference 455
 
-#define LED1Pin 25
-
-#define LED2Pin 26
 
 #define MotorPin1 27
 #define MotorPin2 14
@@ -51,9 +48,9 @@
 
 #define MPU6050Address 0x68
 
-#define HMC5883LAddress 0x7E
+#define HMC5883LAddress 0x0D
 
-#define BME280Address 0x77
+#define BME280Address 0x76
 
 #define MinDuty 1000
 #define MaxDuty 2000
@@ -74,7 +71,7 @@ Voltage_Sensor voltage(VoltmeterPin, MaxVoltage);
 
 ESC brake(BrakePin);
 
-ESC steering(SteeringPin);  
+ESC steering;
 
 volatile unsigned long last_time = 0;
 volatile double speed = 0;
@@ -268,6 +265,9 @@ void setup() {
 
   Serial.begin(9600);
   Serial.println("Serial began on 9600 baud rate");
+
+  steering.attach(SteeringPin, 15, 0, 100, 500, 2500);
+
   pinMode(SpeedometerPin, INPUT_PULLDOWN);
   pinMode(RXPin1, INPUT_PULLDOWN);
   pinMode(RXPin2, INPUT_PULLDOWN);
@@ -288,8 +288,29 @@ void loop() {
   Serial.print("  ");
   Serial.print(PulseWidth4);
   Serial.print("  ");
-  Serial.println(PulseWidth5);
+  Serial.print(PulseWidth5);
+  Serial.println("  ");
+
   // updateVelocity();
+
   // updatePower();
+  // Serial.print(Current1);
+  // Serial.print("  ");
+  // Serial.print(Current2);
+  // Serial.print("  ");
+  // Serial.print(Current3);
+  // Serial.print("  ");
+  // Serial.println(Current4);
+
+  // updateVelocity();
+
   // updateMotorSpeed();
+
+  motor1.write(PulseWidth3*PulseWidth5/20000);
+  motor2.write(PulseWidth3*PulseWidth5/20000);
+  motor3.write(PulseWidth3*PulseWidth5/20000);
+  motor4.write(PulseWidth3*PulseWidth5/20000);
+
+  steering.write(PulseWidth1);
+
 }
