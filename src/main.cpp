@@ -321,23 +321,50 @@
 *********/
 #include <Arduino.h>
 
+#define led1 2
+#define led2 4
+#define SpeedometerPin 32
+#define Circumference 455
+
+volatile unsigned long last_time = 0;
+volatile double speed = 0;
+double velocity = 0;
+
 TaskHandle_t Task1;
 TaskHandle_t Task2;
 
-// LED pins
-const int led1 = 2;
-const int led2 = 4;
+portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
+
+void IRAM_ATTR SpeedInterrupt() {
+  portENTER_CRITICAL_ISR(&mux);
+   if((long)(millis() - last_time) >= 5) {
+    speed = Circumference/(millis() - last_time);
+    last_time = millis();
+    Serial.print("Task1 running on core ");
+    Serial.println(xPortGetCoreID());
+  }
+  portEXIT_CRITICAL_ISR(&mux);
+}
+
+void updateVelocity(){
+  if(millis()-last_time>500){
+    velocity = 0;
+  }
+  else{
+    velocity = speed;
+  }
+}
 
 //Task1code: blinks an LED every 1000 ms
 void Task1code( void * pvParameters ){
   Serial.print("Task1 running on core ");
   Serial.println(xPortGetCoreID());
+  attachInterrupt(digitalPinToInterrupt(SpeedometerPin), SpeedInterrupt, RISING);
+
 
   for(;;){
-    digitalWrite(led1, HIGH);
-    delay(1000);
-    digitalWrite(led1, LOW);
-    delay(1000);
+    updateVelocity();
+    Serial.println(velocity);
   } 
 }
 
@@ -358,6 +385,7 @@ void setup() {
   Serial.begin(9600); 
   pinMode(led1, OUTPUT);
   pinMode(led2, OUTPUT);
+  pinMode(SpeedometerPin, INPUT_PULLDOWN);
 
   //create a task that will be executed in the Task1code() function, with priority 1 and executed on core 0
   xTaskCreatePinnedToCore(
