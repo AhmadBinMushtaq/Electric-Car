@@ -53,6 +53,9 @@
 
 #define BME280Address 0x76
 
+#define RXMinDuty 1000
+#define RXMaxDuty 2000
+
 #define MotorMinDuty 1000
 #define MotorMaxDuty 2000
 
@@ -192,35 +195,35 @@ void IRAM_ATTR RXInterrupt5() {
 
 void updateRX(){
   if (pulses1 < 2100){
-    PulseWidth1 = map(constrain(pulses1, MinDuty, MaxDuty), MinDuty, MaxDuty, 0, 100);
+    PulseWidth1 = map(constrain(pulses1, RXMinDuty, RXMaxDuty), RXMinDuty, RXMaxDuty, 0, 100);
   }
   if (micros()-start_time1>30000){
     PulseWidth1 = 0;
   }
 
   if (pulses2 < 2100){
-    PulseWidth2 = map(constrain(pulses2, MinDuty, MaxDuty), MinDuty, MaxDuty, 0, 100);
+    PulseWidth2 = map(constrain(pulses2, RXMinDuty, RXMaxDuty), RXMinDuty, RXMaxDuty, 0, 100);
   }
   if (micros()-start_time2>30000){
     PulseWidth2 = 0;
   }
 
   if (pulses3 < 2100){
-    PulseWidth3 = map(constrain(pulses3, MinDuty, MaxDuty), MinDuty, MaxDuty, 0, 100);
+    PulseWidth3 = map(constrain(pulses3, RXMinDuty, RXMaxDuty), RXMinDuty, RXMaxDuty, 0, 100);
   }
   if (micros()-start_time3>30000){
     PulseWidth3 = 0;
   }
 
   if (pulses4 < 2100){
-    PulseWidth4 = map(constrain(pulses4, MinDuty, MaxDuty), MinDuty, MaxDuty, 0, 100);
+    PulseWidth4 = map(constrain(pulses4, RXMinDuty, RXMaxDuty), RXMinDuty, RXMaxDuty, 0, 100);
   }
   if (micros()-start_time4>30000){
     PulseWidth4 = 0;
   }
 
   if (pulses5 < 2100){
-    PulseWidth5 = map(constrain(pulses5, MinDuty, MaxDuty), MinDuty, MaxDuty, 0, MaxSpeed);
+    PulseWidth5 = map(constrain(pulses5, RXMinDuty, RXMaxDuty), RXMinDuty, RXMaxDuty, 0, MaxSpeed);
   }
   if (micros()-start_time5>30000){
     PulseWidth5 = 0;
