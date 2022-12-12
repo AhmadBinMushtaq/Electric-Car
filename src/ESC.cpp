@@ -2,14 +2,10 @@
 
 int ESC::channel_next_free = 0;
 
-ESC::ESC(int pin) {
+ESC::ESC(int pin, int minPulseWidth, int maxPulseWidth){
     _resetFields();
-    ESC::attach(pin);
-};
-
-ESC::ESC() {
-    _resetFields();
-};
+    ESC::attach(pin, CHANNEL_NOT_ATTACHED, MIN_SPEED, MAX_SPEED, minPulseWidth, maxPulseWidth);
+}
 
 bool ESC::attach(int pin, int channel, 
                    int minSpeed, int maxSpeed, 

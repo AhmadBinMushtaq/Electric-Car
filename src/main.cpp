@@ -53,8 +53,14 @@
 
 #define BME280Address 0x76
 
-#define MinDuty 1000
-#define MaxDuty 2000
+#define MotorMinDuty 1000
+#define MotorMaxDuty 2000
+
+#define SteeringMinDuty 500
+#define SteeringMaxDuty 2500
+
+#define BrakeMinDuty 1000
+#define BrakeMaxDuty 2000
 
 #define MaxSpeed 20000
 
@@ -100,6 +106,18 @@ double Current4 = 0;
 double Voltage = 0;
 
 double Power = 0;
+
+ESC motor1(MotorPin1, MotorMinDuty, MotorMaxDuty);
+ESC motor2(MotorPin2, MotorMinDuty, MotorMaxDuty);
+ESC motor3(MotorPin3, MotorMinDuty, MotorMaxDuty);
+ESC motor4(MotorPin4, MotorMinDuty, MotorMaxDuty);
+ACS712 acs1(ACS1Pin, ACS1Slope, ACS1Offset);
+ACS712 acs2(ACS2Pin, ACS2Slope, ACS2Offset);
+ACS712 acs3(ACS3Pin, ACS3Slope, ACS3Offset);
+ACS712 acs4(ACS4Pin, ACS4Slope, ACS4Offset);
+Voltage_Sensor voltage(VoltmeterPin, MaxVoltage);
+ESC brake(BrakePin, BrakeMinDuty, BrakeMaxDuty);
+ESC steering(SteeringPin, SteeringMinDuty, SteeringMaxDuty);
 
 TaskHandle_t Task1;
 TaskHandle_t Task2;
@@ -259,18 +277,7 @@ void Task1code( void * pvParameters ){
 void Task2code( void * pvParameters ){
   Serial.print("Task2 running on core ");
   Serial.println(xPortGetCoreID());
-  ESC motor1(MotorPin1);
-  ESC motor2(MotorPin2);
-  ESC motor3(MotorPin3);
-  ESC motor4(MotorPin4);
-  ACS712 acs1(ACS1Pin, ACS1Slope, ACS1Offset);
-  ACS712 acs2(ACS2Pin, ACS2Slope, ACS2Offset);
-  ACS712 acs3(ACS3Pin, ACS3Slope, ACS3Offset);
-  ACS712 acs4(ACS4Pin, ACS4Slope, ACS4Offset);
-  Voltage_Sensor voltage(VoltmeterPin, MaxVoltage);
-  ESC brake(BrakePin);
-  ESC steering;
-  steering.attach(SteeringPin, 15, 0, 100, 500, 2500);
+  
   motor1.write(0);
   motor2.write(0);
   motor3.write(0);
