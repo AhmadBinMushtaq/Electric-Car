@@ -4,6 +4,7 @@
 #include <Voltage_Sensor.h>
 #include <GPS.h>
 
+
 // Pin Definitions
 
 #define RXPin1 2
@@ -12,10 +13,10 @@
 #define RXPin4 18
 #define RXPin5 19
 
-#define VoltmeterPin 23
+#define VoltmeterPin 15
 #define MaxVoltage 25
 
-#define SteeringPin 15
+#define SteeringPin 23
 
 #define ACS1Pin 35
 #define ACS1Slope 9.04405
@@ -33,9 +34,9 @@
 #define ACS4Slope 9.04405
 #define ACS4Offset -6.8177
 
-#define BrakePin 32
+#define BrakePin 33
 
-#define SpeedometerPin 33
+#define SpeedometerPin 32
 #define Circumference 455
 
 
@@ -56,22 +57,6 @@
 #define MaxDuty 2000
 
 #define MaxSpeed 20000
-
-ESC motor1(MotorPin1);
-ESC motor2(MotorPin2);
-ESC motor3(MotorPin3);
-ESC motor4(MotorPin4);
-
-ACS712 acs1(ACS1Pin, ACS1Slope, ACS1Offset);
-ACS712 acs2(ACS2Pin, ACS2Slope, ACS2Offset);
-ACS712 acs3(ACS3Pin, ACS3Slope, ACS3Offset);
-ACS712 acs4(ACS4Pin, ACS4Slope, ACS4Offset);
-
-Voltage_Sensor voltage(VoltmeterPin, MaxVoltage);
-
-ESC brake(BrakePin);
-
-ESC steering;
 
 volatile unsigned long last_time = 0;
 volatile double speed = 0;
@@ -116,6 +101,9 @@ double Voltage = 0;
 
 double Power = 0;
 
+TaskHandle_t Task1;
+TaskHandle_t Task2;
+
 portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 
 void IRAM_ATTR SpeedInterrupt() {
@@ -123,6 +111,8 @@ void IRAM_ATTR SpeedInterrupt() {
    if((long)(millis() - last_time) >= 5) {
     speed = Circumference/(millis() - last_time);
     last_time = millis();
+    Serial.print("Task1 running on core ");
+    Serial.println(xPortGetCoreID());
   }
   portEXIT_CRITICAL_ISR(&mux);
 }
@@ -219,6 +209,7 @@ void updateRX(){
   }
 }
 
+
 void updateVelocity(){
   if(millis()-last_time>500){
     velocity = 0;
@@ -226,28 +217,6 @@ void updateVelocity(){
   else{
     velocity = speed;
   }
-}
-
-void updatePower(){
-  Current1 = acs1.getCurrent();
-  Current2 = acs2.getCurrent();
-  Current3 = acs3.getCurrent();
-  Current4 = acs4.getCurrent();
-  Voltage = voltage.getVoltage();
-  Power = Voltage*(Current1+Current2+Current3+Current4);
-}
-
-void updateMotorSpeed(){
-  int velocity_d = PulseWidth3*PulseWidth5/100 - velocity;
-  int power_d = Power*velocity_d;
-  motorSpeed1 = constrain(motorSpeed1*(1+((Power/4)-(Current1*Voltage)+power_d/4)/(Current1*Voltage)), 0, 100);
-  motorSpeed2 = constrain(motorSpeed2*(1+((Power/4)-(Current2*Voltage)+power_d/4)/(Current2*Voltage)), 0, 100);
-  motorSpeed3 = constrain(motorSpeed3*(1+((Power/4)-(Current3*Voltage)+power_d/4)/(Current3*Voltage)), 0, 100);
-  motorSpeed4 = constrain(motorSpeed4*(1+((Power/4)-(Current4*Voltage)+power_d/4)/(Current4*Voltage)), 0, 100);
-  motor1.write(motorSpeed1);
-  motor2.write(motorSpeed2); 
-  motor3.write(motorSpeed3);
-  motor4.write(motorSpeed4);
 }
 
 void attachInterrupt(){
@@ -261,56 +230,113 @@ void attachInterrupt(){
   Serial.println("Reciever channels connected");
 }
 
-void setup() {
+//Task1code: blinks an LED every 1000 ms
+void Task1code( void * pvParameters ){
+  Serial.print("Task1 running on core ");
+  Serial.println(xPortGetCoreID());
+  attachInterrupt();
+  delay(3000);
 
-  Serial.begin(9600);
-  Serial.println("Serial began on 9600 baud rate");
 
+  for(;;){
+    updateVelocity();
+    // Serial.println(velocity);
+    updateRX();
+    // Serial.print(PulseWidth1);
+    // Serial.print("  ");
+    // Serial.print(PulseWidth2);
+    // Serial.print("  ");
+    // Serial.print(PulseWidth3);
+    // Serial.print("  ");
+    // Serial.print(PulseWidth4);
+    // Serial.print("  ");
+    // Serial.println(PulseWidth5);
+    delay(1);
+  } 
+}
+
+//Task2code: blinks an LED every 700 ms
+void Task2code( void * pvParameters ){
+  Serial.print("Task2 running on core ");
+  Serial.println(xPortGetCoreID());
+  ESC motor1(MotorPin1);
+  ESC motor2(MotorPin2);
+  ESC motor3(MotorPin3);
+  ESC motor4(MotorPin4);
+  ACS712 acs1(ACS1Pin, ACS1Slope, ACS1Offset);
+  ACS712 acs2(ACS2Pin, ACS2Slope, ACS2Offset);
+  ACS712 acs3(ACS3Pin, ACS3Slope, ACS3Offset);
+  ACS712 acs4(ACS4Pin, ACS4Slope, ACS4Offset);
+  Voltage_Sensor voltage(VoltmeterPin, MaxVoltage);
+  ESC brake(BrakePin);
+  ESC steering;
   steering.attach(SteeringPin, 15, 0, 100, 500, 2500);
+  motor1.write(0);
+  motor2.write(0);
+  motor3.write(0);
+  motor4.write(0);
+  delay(3000);
 
+  for(;;){
+    Current1 = acs1.getCurrent();
+    Current2 = acs2.getCurrent();
+    Current3 = acs3.getCurrent();
+    Current4 = acs4.getCurrent();
+    Voltage = voltage.getVoltage();
+    Power = Voltage*(Current1+Current2+Current3+Current4);
+    motorSpeed1 = (PulseWidth3*PulseWidth5/20000);
+    motorSpeed2 = (PulseWidth3*PulseWidth5/20000);
+    motorSpeed3 = (PulseWidth3*PulseWidth5/20000);
+    motorSpeed4 = (PulseWidth3*PulseWidth5/20000);
+
+    motor1.write(motorSpeed1);
+    motor2.write(motorSpeed2); 
+    motor3.write(motorSpeed3);
+    motor4.write(motorSpeed4);
+    steering.write(PulseWidth1);
+    Serial.println(PulseWidth1);
+
+    // int velocity_d = PulseWidth3*PulseWidth5/100 - velocity;
+    // int power_d = Power*velocity_d;
+    // motorSpeed1 = constrain(motorSpeed1*(1+((Power/4)-(Current1*Voltage)+power_d/4)/(Current1*Voltage)), 0, 100);
+    // motorSpeed2 = constrain(motorSpeed2*(1+((Power/4)-(Current2*Voltage)+power_d/4)/(Current2*Voltage)), 0, 100);
+    // motorSpeed3 = constrain(motorSpeed3*(1+((Power/4)-(Current3*Voltage)+power_d/4)/(Current3*Voltage)), 0, 100);
+    // motorSpeed4 = constrain(motorSpeed4*(1+((Power/4)-(Current4*Voltage)+power_d/4)/(Current4*Voltage)), 0, 100);
+  }
+}
+
+void setup() {
+  Serial.begin(9600);
   pinMode(SpeedometerPin, INPUT_PULLDOWN);
   pinMode(RXPin1, INPUT_PULLDOWN);
   pinMode(RXPin2, INPUT_PULLDOWN);
   pinMode(RXPin3, INPUT_PULLDOWN);
   pinMode(RXPin4, INPUT_PULLDOWN);
   pinMode(RXPin5, INPUT_PULLDOWN);
-  attachInterrupt();
-  Serial.println("Interrupts Attached");
+
+  //create a task that will be executed in the Task1code() function, with priority 1 and executed on core 0
+  xTaskCreatePinnedToCore(
+                    Task1code,   /* Task function. */
+                    "Task1",     /* name of task. */
+                    10000,       /* Stack size of task */
+                    NULL,        /* parameter of the task */
+                    1,           /* priority of the task */
+                    &Task1,      /* Task handle to keep track of created task */
+                    0);          /* pin task to core 0 */                  
+  delay(500); 
+
+  //create a task that will be executed in the Task2code() function, with priority 1 and executed on core 1
+  xTaskCreatePinnedToCore(
+                    Task2code,   /* Task function. */
+                    "Task2",     /* name of task. */
+                    10000,       /* Stack size of task */
+                    NULL,        /* parameter of the task */
+                    1,           /* priority of the task */
+                    &Task2,      /* Task handle to keep track of created task */
+                    1);          /* pin task to core 1 */
+    delay(500); 
 }
 
 void loop() {
-  updateRX();
-  Serial.print(PulseWidth1);
-  Serial.print("  ");
-  Serial.print(PulseWidth2);
-  Serial.print("  ");
-  Serial.print(PulseWidth3);
-  Serial.print("  ");
-  Serial.print(PulseWidth4);
-  Serial.print("  ");
-  Serial.print(PulseWidth5);
-  Serial.println("  ");
-
-  // updateVelocity();
-
-  // updatePower();
-  // Serial.print(Current1);
-  // Serial.print("  ");
-  // Serial.print(Current2);
-  // Serial.print("  ");
-  // Serial.print(Current3);
-  // Serial.print("  ");
-  // Serial.println(Current4);
-
-  // updateVelocity();
-
-  // updateMotorSpeed();
-
-  motor1.write(PulseWidth3*PulseWidth5/20000);
-  motor2.write(PulseWidth3*PulseWidth5/20000);
-  motor3.write(PulseWidth3*PulseWidth5/20000);
-  motor4.write(PulseWidth3*PulseWidth5/20000);
-
-  steering.write(PulseWidth1);
-
+  
 }
