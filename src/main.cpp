@@ -27,12 +27,12 @@
 #define ACS2Offset -15.3177
 
 #define ACS3Pin 26
-#define ACS3Slope 9.04405
-#define ACS3Offset -14.8177
+#define ACS3Slope 22.3971
+#define ACS3Offset -37.2174
 
 #define ACS4Pin 25
-#define ACS4Slope 9.04405
-#define ACS4Offset -6.8177
+#define ACS4Slope 22.3757
+#define ACS4Offset -37.2776
 
 #define BrakePin 33
 
@@ -251,6 +251,39 @@ void attachInterrupt(){
   Serial.println("Reciever channels connected");
 }
 
+void safeMode(){
+  motor1.write(0);
+  motor2.write(0);
+  motor3.write(0);
+  motor4.write(0);
+  bool triggered = false;
+  long int trig_time = 0;
+
+  for(;;){
+    if(triggered){
+      if(PulseWidth2<20){
+        if((millis()-trig_time) > 3000){
+          Serial.println("Vehicle Armed!!!");
+          delay(200);
+          return;
+        }
+      }
+      else{
+        triggered = false;
+      }
+    }
+    if(!triggered){
+      if(PulseWidth2<20){
+        triggered = true;
+        trig_time = millis();
+        Serial.println("Triggered");
+        delay(200);
+      }
+    }
+  }
+
+}
+
 //Task1code: blinks an LED every 1000 ms
 void Task1code( void * pvParameters ){
   Serial.print("Task1 running on core ");
@@ -280,18 +313,22 @@ void Task1code( void * pvParameters ){
 void Task2code( void * pvParameters ){
   Serial.print("Task2 running on core ");
   Serial.println(xPortGetCoreID());
-  
-  motor1.write(0);
-  motor2.write(0);
-  motor3.write(0);
-  motor4.write(0);
-  delay(3000);
+  safeMode();
 
   for(;;){
     Current1 = acs1.getCurrent();
     Current2 = acs2.getCurrent();
     Current3 = acs3.getCurrent();
     Current4 = acs4.getCurrent();
+
+    // Serial.print(Current1);
+    // Serial.print("    ");
+    // Serial.print(Current2);
+    // Serial.print("    ");
+    // Serial.print(Current3);
+    // Serial.print("    ");
+    // Serial.print(Current4);
+    // Serial.println("    ");
     Voltage = voltage.getVoltage();
     Power = Voltage*(Current1+Current2+Current3+Current4);
     motorSpeed1 = (PulseWidth3*PulseWidth5/20000);
@@ -304,7 +341,6 @@ void Task2code( void * pvParameters ){
     motor3.write(motorSpeed3);
     motor4.write(motorSpeed4);
     steering.write(PulseWidth1);
-    Serial.println(PulseWidth1);
 
     // int velocity_d = PulseWidth3*PulseWidth5/100 - velocity;
     // int power_d = Power*velocity_d;
