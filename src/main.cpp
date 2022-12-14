@@ -3,7 +3,69 @@
 #include <ACS712.h>
 #include <Voltage_Sensor.h>
 #include <GPS.h>
-#include <Definition.h>
+
+
+// Pin Definitions
+
+#define RXPin1 2
+#define RXPin2 4
+#define RXPin3 5
+#define RXPin4 18
+#define RXPin5 19
+
+#define VoltmeterPin 15
+#define MaxVoltage 25
+
+#define SteeringPin 23
+
+#define ACS1Pin 35
+#define ACS1Slope 22.3971
+#define ACS1Offset -37.2174
+
+#define ACS2Pin 34
+#define ACS2Slope 22.3757
+#define ACS2Offset -37.2776
+
+#define ACS3Pin 26
+#define ACS3Slope 9.04405
+#define ACS3Offset -14.3177
+
+#define ACS4Pin 25
+#define ACS4Slope 9.04405
+#define ACS4Offset -15.3177
+
+#define BrakePin 33
+
+#define SpeedometerPin 32
+#define Circumference 455
+
+
+#define MotorPin1 27
+#define MotorPin2 14
+#define MotorPin3 12
+#define MotorPin4 13
+
+//I2C Addresses
+
+#define MPU6050Address 0x68
+
+#define HMC5883LAddress 0x0D
+
+#define BME280Address 0x76
+
+#define RXMinDuty 1000
+#define RXMaxDuty 2000
+
+#define MotorMinDuty 1000
+#define MotorMaxDuty 2000
+
+#define SteeringMinDuty 500
+#define SteeringMaxDuty 2500
+
+#define BrakeMinDuty 1000
+#define BrakeMaxDuty 2000
+
+#define MaxSpeed 20000
 
 volatile unsigned long last_time = 0;
 volatile double speed = 0;
@@ -178,6 +240,46 @@ void updateVelocity(){
   }
 }
 
+void updatePower(){
+  Current1 = 0;
+  Current2 = 0;
+  Current3 = 0;
+  Current4 = 0;
+  Voltage = 0;
+
+  for(int i = 0; i<10; i++){
+    Current1 += acs1.getCurrent()/10;
+    Current2 += acs2.getCurrent()/10;
+    Current3 += acs3.getCurrent()/10;
+    Current4 += acs4.getCurrent()/10;
+    Voltage = voltage.getVoltage()/10;
+  }
+
+  Power = Voltage * (Current1+Current2+Current3+Current4);
+
+}
+
+void updateSpeed(){
+  motorSpeed1 = (PulseWidth3*PulseWidth5/20000);
+  motorSpeed2 = (PulseWidth3*PulseWidth5/20000);
+  motorSpeed3 = (PulseWidth3*PulseWidth5/20000);
+  motorSpeed4 = (PulseWidth3*PulseWidth5/20000);
+
+  motor1.write(motorSpeed1);
+  motor2.write(motorSpeed2); 
+  motor3.write(motorSpeed3);
+  motor4.write(motorSpeed4);
+  steering.write(PulseWidth1);
+
+  // int velocity_d = PulseWidth3*PulseWidth5/100 - velocity;
+  // int power_d = Power*velocity_d;
+  // motorSpeed1 = constrain(motorSpeed1*(1+((Power/4)-(Current1*Voltage)+power_d/4)/(Current1*Voltage)), 0, 100);
+  // motorSpeed2 = constrain(motorSpeed2*(1+((Power/4)-(Current2*Voltage)+power_d/4)/(Current2*Voltage)), 0, 100);
+  // motorSpeed3 = constrain(motorSpeed3*(1+((Power/4)-(Current3*Voltage)+power_d/4)/(Current3*Voltage)), 0, 100);
+  // motorSpeed4 = constrain(motorSpeed4*(1+((Power/4)-(Current4*Voltage)+power_d/4)/(Current4*Voltage)), 0, 100);
+
+}
+
 void attachInterrupt(){
   attachInterrupt(digitalPinToInterrupt(SpeedometerPin), SpeedInterrupt, RISING);
   Serial.println("Speedometer Connected");
@@ -251,41 +353,24 @@ void Task1code( void * pvParameters ){
 void Task2code( void * pvParameters ){
   Serial.print("Task2 running on core ");
   Serial.println(xPortGetCoreID());
-  safeMode();
+  // safeMode();
 
   for(;;){
-    Current1 = acs1.getCurrent();
-    Current2 = acs2.getCurrent();
-    Current3 = acs3.getCurrent();
-    Current4 = acs4.getCurrent();
+    updatePower();
 
-    // Serial.print(Current1);
-    // Serial.print("    ");
-    // Serial.print(Current2);
-    // Serial.print("    ");
-    // Serial.print(Current3);
-    // Serial.print("    ");
-    // Serial.print(Current4);
-    // Serial.println("    ");
-    Voltage = voltage.getVoltage();
-    Power = Voltage*(Current1+Current2+Current3+Current4);
-    motorSpeed1 = (PulseWidth3*PulseWidth5/20000);
-    motorSpeed2 = (PulseWidth3*PulseWidth5/20000);
-    motorSpeed3 = (PulseWidth3*PulseWidth5/20000);
-    motorSpeed4 = (PulseWidth3*PulseWidth5/20000);
+    Serial.print(Current1, 1);
+    Serial.print("    ");
+    Serial.print(Current2, 1);
+    Serial.print("    ");
+    Serial.print(Current3, 1);
+    Serial.print("    ");
+    Serial.print(Current4, 1);
+    Serial.println("    ");
 
-    motor1.write(motorSpeed1);
-    motor2.write(motorSpeed2); 
-    motor3.write(motorSpeed3);
-    motor4.write(motorSpeed4);
-    steering.write(PulseWidth1);
+    updateSpeed();
 
-    // int velocity_d = PulseWidth3*PulseWidth5/100 - velocity;
-    // int power_d = Power*velocity_d;
-    // motorSpeed1 = constrain(motorSpeed1*(1+((Power/4)-(Current1*Voltage)+power_d/4)/(Current1*Voltage)), 0, 100);
-    // motorSpeed2 = constrain(motorSpeed2*(1+((Power/4)-(Current2*Voltage)+power_d/4)/(Current2*Voltage)), 0, 100);
-    // motorSpeed3 = constrain(motorSpeed3*(1+((Power/4)-(Current3*Voltage)+power_d/4)/(Current3*Voltage)), 0, 100);
-    // motorSpeed4 = constrain(motorSpeed4*(1+((Power/4)-(Current4*Voltage)+power_d/4)/(Current4*Voltage)), 0, 100);
+    delay(100);
+
   }
 }
 
