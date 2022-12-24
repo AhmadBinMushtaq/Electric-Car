@@ -69,7 +69,7 @@
 
 volatile unsigned long last_time = 0;
 volatile double speed = 0;
-double velocity = 0;
+byte velocity = 0;
 
 volatile long start_time1 = 0;
 volatile long current_time1 = 0;
@@ -129,11 +129,9 @@ portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 
 void IRAM_ATTR SpeedInterrupt() {
   portENTER_CRITICAL_ISR(&mux);
-   if((long)(millis() - last_time) >= 5) {
+   if((long)(millis() - last_time) >= 2) {
     speed = Circumference/(millis() - last_time);
     last_time = millis();
-    Serial.print("Task1 running on core ");
-    Serial.println(xPortGetCoreID());
   }
   portEXIT_CRITICAL_ISR(&mux);
 }
@@ -236,7 +234,7 @@ void updateVelocity(){
     velocity = 0;
   }
   else{
-    velocity = speed;
+    velocity = (byte) (speed*3.6);
   }
 }
 
@@ -266,7 +264,7 @@ void updateSpeed(){
   motorSpeed4 = (PulseWidth3*PulseWidth5/20000);
 
   motor1.write(motorSpeed1);
-  motor2.write(motorSpeed2); 
+  motor2.write(motorSpeed2);
   motor3.write(motorSpeed3);
   motor4.write(motorSpeed4);
   steering.write(PulseWidth1);
@@ -282,13 +280,13 @@ void updateSpeed(){
 
 void attachInterrupt(){
   attachInterrupt(digitalPinToInterrupt(SpeedometerPin), SpeedInterrupt, RISING);
-  Serial.println("Speedometer Connected");
+  // Serial.println("Speedometer Connected");
   attachInterrupt(digitalPinToInterrupt(RXPin1), RXInterrupt1, CHANGE);
   attachInterrupt(digitalPinToInterrupt(RXPin2), RXInterrupt2, CHANGE);
   attachInterrupt(digitalPinToInterrupt(RXPin3), RXInterrupt3, CHANGE);
   attachInterrupt(digitalPinToInterrupt(RXPin4), RXInterrupt4, CHANGE);
   attachInterrupt(digitalPinToInterrupt(RXPin5), RXInterrupt5, CHANGE);
-  Serial.println("Reciever channels connected");
+  // Serial.println("Reciever channels connected");
 }
 
 void safeMode(){
@@ -303,7 +301,7 @@ void safeMode(){
     if(triggered){
       if(PulseWidth4<20 && PulseWidth3<5){
         if((millis()-trig_time) > 3000){
-          Serial.println("Vehicle Armed!!!");
+          // Serial.println("Vehicle Armed!!!");
           delay(200);
           return;
         }
@@ -316,7 +314,7 @@ void safeMode(){
       if(PulseWidth4<20 && PulseWidth3<5){
         triggered = true;
         trig_time = millis();
-        Serial.println("Triggered");
+        // Serial.println("Triggered");
         delay(200);
       }
     }
@@ -326,15 +324,16 @@ void safeMode(){
 
 //Task1code: blinks an LED every 1000 ms
 void Task1code( void * pvParameters ){
-  Serial.print("Task1 running on core ");
-  Serial.println(xPortGetCoreID());
+  // Serial.print("Task1 running on core ");
+  // Serial.println(xPortGetCoreID());
   attachInterrupt();
   delay(3000);
 
 
   for(;;){
     updateVelocity();
-    // Serial.println(velocity);
+    Serial.write(velocity);
+    // Serial.println();
     updateRX();
     // Serial.print(PulseWidth1);
     // Serial.print("  ");
@@ -345,31 +344,46 @@ void Task1code( void * pvParameters ){
     // Serial.print(PulseWidth4);
     // Serial.print("  ");
     // Serial.println(PulseWidth5);
+
+    // while(Serial.available()){
+    //   Serial.read();
+    // }
+    // Serial.write(PulseWidth1);
+    // Serial.write("  ");
+    // Serial.write(PulseWidth2);
+    // Serial.write("  ");
+    // Serial.write(PulseWidth3);
+    // Serial.write("  ");
+    // Serial.write(PulseWidth4);
+    // Serial.write("  ");
+    // Serial.write(PulseWidth5);
+    // Serial.write("\n");
+
     delay(1);
   } 
 }
 
 //Task2code: blinks an LED every 700 ms
 void Task2code( void * pvParameters ){
-  Serial.print("Task2 running on core ");
-  Serial.println(xPortGetCoreID());
+  // Serial.print("Task2 running on core ");
+  // Serial.println(xPortGetCoreID());
   // safeMode();
 
   for(;;){
     updatePower();
 
-    Serial.print(Current1, 1);
-    Serial.print("    ");
-    Serial.print(Current2, 1);
-    Serial.print("    ");
-    Serial.print(Current3, 1);
-    Serial.print("    ");
-    Serial.print(Current4, 1);
-    Serial.println("    ");
+    // Serial.print(Current1, 1);
+    // Serial.print("    ");
+    // Serial.print(Current2, 1);
+    // Serial.print("    ");
+    // Serial.print(Current3, 1);
+    // Serial.print("    ");
+    // Serial.print(Current4, 1);
+    // Serial.print("    ");
 
     updateSpeed();
 
-    delay(100);
+    delay(10);
 
   }
 }
