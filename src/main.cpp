@@ -233,8 +233,14 @@ void updateVelocity(){
   if(millis()-last_time>500){
     velocity = 0;
   }
+  else if(velocity-speed > 5){
+    velocity -= 5;
+  }
+  else if(speed-velocity>5){
+    velocity += 5;
+  }
   else{
-    velocity = (byte) (speed*3.6);
+    velocity = speed;
   }
 }
 
@@ -359,7 +365,7 @@ void Task1code( void * pvParameters ){
     // Serial.write(PulseWidth5);
     // Serial.write("\n");
 
-    delay(1);
+    delay(20);
   } 
 }
 
