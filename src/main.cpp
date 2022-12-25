@@ -65,11 +65,9 @@
 #define BrakeMinDuty 1000
 #define BrakeMaxDuty 2000
 
-#define MaxSpeed 20000
-
 volatile unsigned long last_time = 0;
 volatile double speed = 0;
-byte velocity = 0;
+int velocity = 0;
 
 volatile long start_time1 = 0;
 volatile long current_time1 = 0;
@@ -96,11 +94,9 @@ volatile long current_time5 = 0;
 volatile long pulses5 = 0;
 int PulseWidth5 = 0;
 
-int motorSpeed1 = 0;
-int motorSpeed2 = 0;
-int motorSpeed3 = 0;
-int motorSpeed4 = 0;
+int motorSpeed = 0;
 
+int Current = 0;
 double Current1 = 0;
 double Current2 = 0;
 double Current3 = 0;
@@ -108,7 +104,7 @@ double Current4 = 0;
 
 double Voltage = 0;
 
-double Power = 0;
+int Power = 0;
 
 ESC motor1(MotorPin1, MotorMinDuty, MotorMaxDuty);
 ESC motor2(MotorPin2, MotorMinDuty, MotorMaxDuty);
@@ -221,7 +217,7 @@ void updateRX(){
   }
 
   if (pulses5 < 2100){
-    PulseWidth5 = map(constrain(pulses5, RXMinDuty, RXMaxDuty), RXMinDuty, RXMaxDuty, 0, MaxSpeed);
+    PulseWidth5 = map(constrain(pulses5, RXMinDuty, RXMaxDuty), RXMinDuty, RXMaxDuty, 0, 100);
   }
   if (micros()-start_time5>30000){
     PulseWidth5 = 0;
@@ -245,34 +241,74 @@ void updateVelocity(){
 }
 
 void updatePower(){
-  Current1 = 0;
-  Current2 = 0;
-  Current3 = 0;
-  Current4 = 0;
-  Voltage = 0;
+  // Current1 = 0;
+  // Current2 = 0;
+  // Current3 = 0;
+  // Current4 = 0;
+  // Voltage = 0;
 
-  for(int i = 0; i<10; i++){
-    Current1 += acs1.getCurrent()/10;
-    Current2 += acs2.getCurrent()/10;
-    Current3 += acs3.getCurrent()/10;
-    Current4 += acs4.getCurrent()/10;
-    Voltage = voltage.getVoltage()/10;
+  // for(int i = 0; i<10; i++){
+  //   Current1 += acs1.getCurrent()/10;
+  //   Current2 += acs2.getCurrent()/10;
+  //   Current3 += acs3.getCurrent()/10;
+  //   Current4 += acs4.getCurrent()/10;
+  //   Voltage = voltage.getVoltage()/10;
+  // }
+
+  int current1 = acs1.getCurrent();
+  int current2 = acs2.getCurrent();
+  int current3 = acs3.getCurrent();
+  int current4 = acs4.getCurrent();
+  Voltage = voltage.getVoltage();
+
+  if(Current1 - current1 > 5){
+    Current1 -=5;
+  } else if(current1 - Current1 > 5){
+    Current1 +=5;
+  } else{
+    Current1 = current1;
   }
 
-  Power = Voltage * (Current1+Current2+Current3+Current4);
+  if(Current2 - current2 > 5){
+    Current2 -=5;
+  } else if(current2 - Current2 > 5){
+    Current2 +=5;
+  } else{
+    Current2 = current2;
+  }
+
+  if(Current3 - current3 > 5){
+    Current3 -=5;
+  } else if(current3 - Current3 > 5){
+    Current3 +=5;
+  } else{
+    Current3 = current3;
+  }
+
+  if(Current4 - current4 > 5){
+    Current4 -=5;
+  } else if(current4 - Current4 > 5){
+    Current4 +=5;
+  } else{
+    Current4 = current4;
+  }
+
+  Current = Current1+Current2+Current3+Current4;
+  Power = (int)(Voltage*Current/10);
 
 }
 
 void updateSpeed(){
-  motorSpeed1 = (PulseWidth3*PulseWidth5/20000);
-  motorSpeed2 = (PulseWidth3*PulseWidth5/20000);
-  motorSpeed3 = (PulseWidth3*PulseWidth5/20000);
-  motorSpeed4 = (PulseWidth3*PulseWidth5/20000);
+  motorSpeed = PulseWidth3;
 
-  motor1.write(motorSpeed1);
-  motor2.write(motorSpeed2);
-  motor3.write(motorSpeed3);
-  motor4.write(motorSpeed4);
+  motor1.write(motorSpeed);
+  motor2.write(motorSpeed);
+  motor3.write(motorSpeed);
+  motor4.write(motorSpeed);
+
+  // Serial.print(motorSpeed);
+  // Serial.print("    ");
+  // Serial.println(velocity);
   steering.write(PulseWidth1);
 
   // int velocity_d = PulseWidth3*PulseWidth5/100 - velocity;
@@ -328,6 +364,20 @@ void safeMode(){
 
 }
 
+void send(){
+    Serial.print(velocity);
+    Serial.print(",");
+    Serial.print(Current);
+    Serial.print(",");
+    Serial.print(Power);
+    Serial.print(",");
+    Serial.print(motorSpeed);
+    Serial.print(",");
+    Serial.print(PulseWidth1);
+    Serial.println("");
+
+}
+
 //Task1code: blinks an LED every 1000 ms
 void Task1code( void * pvParameters ){
   // Serial.print("Task1 running on core ");
@@ -338,8 +388,7 @@ void Task1code( void * pvParameters ){
 
   for(;;){
     updateVelocity();
-    Serial.write(velocity);
-    // Serial.println();
+
     updateRX();
     // Serial.print(PulseWidth1);
     // Serial.print("  ");
@@ -351,21 +400,7 @@ void Task1code( void * pvParameters ){
     // Serial.print("  ");
     // Serial.println(PulseWidth5);
 
-    // while(Serial.available()){
-    //   Serial.read();
-    // }
-    // Serial.write(PulseWidth1);
-    // Serial.write("  ");
-    // Serial.write(PulseWidth2);
-    // Serial.write("  ");
-    // Serial.write(PulseWidth3);
-    // Serial.write("  ");
-    // Serial.write(PulseWidth4);
-    // Serial.write("  ");
-    // Serial.write(PulseWidth5);
-    // Serial.write("\n");
-
-    delay(20);
+    delay(10);
   } 
 }
 
@@ -378,18 +413,28 @@ void Task2code( void * pvParameters ){
   for(;;){
     updatePower();
 
-    // Serial.print(Current1, 1);
+    // Serial.print(Current1,1);
     // Serial.print("    ");
-    // Serial.print(Current2, 1);
+    // Serial.print(Current2,1);
     // Serial.print("    ");
-    // Serial.print(Current3, 1);
+    // Serial.print(Current3,1);
     // Serial.print("    ");
-    // Serial.print(Current4, 1);
+    // Serial.print(Current4,1);
     // Serial.print("    ");
+    // Serial.print((byte)Current1);
+    // Serial.print("    ");
+    // Serial.print((byte)Current2);
+    // Serial.print("    ");
+    // Serial.print((byte)Current3);
+    // Serial.print("    ");
+    // Serial.print((byte)Current4);
+    // Serial.println("    ");
+
+    send();
 
     updateSpeed();
 
-    delay(10);
+    delay(100);
 
   }
 }
