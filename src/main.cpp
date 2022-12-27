@@ -84,54 +84,90 @@
 //Max. Duty Cycle for PWM input of ESC for BLDC motors
 #define MotorMaxDuty 2000
 
-
+//Min. Duty Cycle for PWM input of Steering Servo
 #define SteeringMinDuty 500
+//Max. Duty Cycle for PWM input of Steering Servo
 #define SteeringMaxDuty 2500
 
+//Min. Duty Cycle for PWM input of Brake Servo
 #define BrakeMinDuty 1000
+//Max. Duty Cycle for PWM input of Brake Servo
 #define BrakeMaxDuty 2000
 
 //Declare Interrupt variables
+
+//stores millis for the last interrupt recorded from speedometer
 volatile unsigned long last_time = 0;
+
+//Temporarily store the value of speed in this variable
 volatile double speed = 0;
+
+//Permanent variable for speed. Updated in UpdateSpeed function
 int velocity = 0;
 
+//Rising Edge time micros of channel 1 PWM interrupt from Flysky reciever
 volatile long start_time1 = 0;
+//New interrupt time micros of channel 1 PWM interrupt from Flysky reciever
 volatile long current_time1 = 0;
+//Duration of PWM pulse input
 volatile long pulses1 = 0;
+//PulseWidth in percentage
 int PulseWidth1 = 0;
 
+//Rising Edge time micros of channel 2 PWM interrupt from Flysky reciever
 volatile long start_time2 = 0;
+//New interrupt time micros of channel 2 PWM interrupt from Flysky reciever
 volatile long current_time2 = 0;
+//Duration of PWM pulse input
 volatile long pulses2 = 0;
+//PulseWidth in percentage
 int PulseWidth2 = 0;
 
+//Rising Edge time micros of channel 3 PWM interrupt from Flysky reciever
 volatile long start_time3 = 0;
+//New interrupt time micros of channel 3 PWM interrupt from Flysky reciever
 volatile long current_time3 = 0;
+//Duration of PWM pulse input
 volatile long pulses3 = 0;
+//PulseWidth in percentage
 int PulseWidth3 = 0;
 
+//Rising Edge time micros of channel 4 PWM interrupt from Flysky reciever
 volatile long start_time4 = 0;
+//New interrupt time micros of channel 4 PWM interrupt from Flysky reciever
 volatile long current_time4 = 0;
+//Duration of PWM pulse input
 volatile long pulses4 = 0;
+//PulseWidth in percentage
 int PulseWidth4 = 0;
 
+//Rising Edge time micros of channel 5 PWM interrupt from Flysky reciever
 volatile long start_time5 = 0;
+//New interrupt time micros of channel 5 PWM interrupt from Flysky reciever
 volatile long current_time5 = 0;
+//Duration of PWM pulse input
 volatile long pulses5 = 0;
+//PulseWidth in percentage
 int PulseWidth5 = 0;
 
 //Declare remaining variables
+
+//Output speed of motors
 int motorSpeed = 0;
 
+//Total Current
 int Current = 0;
+
+//Current through each sensor
 double Current1 = 0;
 double Current2 = 0;
 double Current3 = 0;
 double Current4 = 0;
 
+//Voltage reading from sensor
 double Voltage = 0;
 
+//Total Power
 int Power = 0;
 
 //Create 4 objects of ESC class for Electronic Speed control of BLDC motors
@@ -162,8 +198,11 @@ TaskHandle_t Task2;
 //Interrupt functions
 portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 
+//Speedometer interrupt
 void IRAM_ATTR SpeedInterrupt() {
   portENTER_CRITICAL_ISR(&mux);
+
+  //Ignore any glitches in <2ms
    if((long)(millis() - last_time) >= 2) {
     speed = Circumference/(millis() - last_time);
     last_time = millis();
@@ -171,6 +210,7 @@ void IRAM_ATTR SpeedInterrupt() {
   portEXIT_CRITICAL_ISR(&mux);
 }
 
+// Flysky reciever Channel 1 interrupt
 void IRAM_ATTR RXInterrupt1() {
   portENTER_CRITICAL_ISR(&mux);
 
@@ -182,6 +222,7 @@ void IRAM_ATTR RXInterrupt1() {
   portEXIT_CRITICAL_ISR(&mux);
 }
 
+//Flysky Reciever channel 2 interrupt
 void IRAM_ATTR RXInterrupt2() {
   portENTER_CRITICAL_ISR(&mux);
 
@@ -193,6 +234,7 @@ void IRAM_ATTR RXInterrupt2() {
   portEXIT_CRITICAL_ISR(&mux);
 }
 
+//Flysky Reciever channel 3 interrupt
 void IRAM_ATTR RXInterrupt3() {
   portENTER_CRITICAL_ISR(&mux);
 
@@ -204,6 +246,7 @@ void IRAM_ATTR RXInterrupt3() {
   portEXIT_CRITICAL_ISR(&mux);
 }
 
+//Flysky reciever Channel 4 interrupt
 void IRAM_ATTR RXInterrupt4() {
   portENTER_CRITICAL_ISR(&mux);
 
@@ -215,6 +258,7 @@ void IRAM_ATTR RXInterrupt4() {
   portEXIT_CRITICAL_ISR(&mux);
 }
 
+//Flysky Reciever channel 5 interrupt
 void IRAM_ATTR RXInterrupt5() {
   portENTER_CRITICAL_ISR(&mux);
 
@@ -228,54 +272,86 @@ void IRAM_ATTR RXInterrupt5() {
 
 //Store the Reciever inputs from volatile variables to permanent variables
 void updateRX(){
+
+  //Check if the pulsewidth1 is valid
   if (pulses1 < 2100){
+    //Map pulse 1 to Percentage pulsewidth
     PulseWidth1 = map(constrain(pulses1, RXMinDuty, RXMaxDuty), RXMinDuty, RXMaxDuty, 0, 100);
   }
+
+  //If pulsewidth 1 is invalid
   if (micros()-start_time1>30000){
+    //Reset value of pulsewidth1
     PulseWidth1 = 0;
   }
 
+  //Check if the pulsewidth2 is valid
   if (pulses2 < 2100){
+    //Map pulse 2 to percentage pulsewidth
     PulseWidth2 = map(constrain(pulses2, RXMinDuty, RXMaxDuty), RXMinDuty, RXMaxDuty, 0, 100);
   }
+
+  //If pulsewidth 2 is invalid
   if (micros()-start_time2>30000){
+    //Reset value of pulsewidth2
     PulseWidth2 = 0;
   }
 
+  //Check if pulsewidth3 is valid
   if (pulses3 < 2100){
+    //Map pulse 3 to percentage pulsewidth
     PulseWidth3 = map(constrain(pulses3, RXMinDuty, RXMaxDuty), RXMinDuty, RXMaxDuty, 0, 100);
   }
+
+  //If pulsewidth 3 is invalid
   if (micros()-start_time3>30000){
+    //Reset value of pulsewidth3
     PulseWidth3 = 0;
   }
 
+  //Check if pulsewidth4 is valid
   if (pulses4 < 2100){
+    //Map pulse 4 to percentage pulsewidth
     PulseWidth4 = map(constrain(pulses4, RXMinDuty, RXMaxDuty), RXMinDuty, RXMaxDuty, 0, 100);
   }
+  //If pulsewidth 4 is invalid
   if (micros()-start_time4>30000){
+    //Reset value of pulsewidth4
     PulseWidth4 = 0;
   }
 
+  //Check if pulsewidth5 is valid
   if (pulses5 < 2100){
+    //Map pulse 5 to percentage pulsewidth
     PulseWidth5 = map(constrain(pulses5, RXMinDuty, RXMaxDuty), RXMinDuty, RXMaxDuty, 0, 100);
   }
+  //If pulsewidth5 is invalid
   if (micros()-start_time5>30000){
+    //Reset value of pulsewidth5
     PulseWidth5 = 0;
   }
 }
 
 //Store the value of speed from volatile variable to permanent variable for processing
 void updateVelocity(){
+  //Check if the axle is stopped
   if(millis()-last_time>500){
+    //Reset velocity to zero
     velocity = 0;
   }
+  //Check if any glitches in speedometer values
   else if(velocity-speed > 5){
+    //Smooth out the glitches
     velocity -= 5;
   }
+  //Check for glitches in negative direction
   else if(speed-velocity>5){
+    //Again smooth out the glitches
     velocity += 5;
   }
+  //If no glitches
   else{
+    //Store velocity to permanent variable
     velocity = speed;
   }
 }
@@ -297,45 +373,80 @@ void updatePower(){
   //   Voltage = voltage.getVoltage()/10;
   // }
 
+  //Store values of currents and voltages to temporary variables
   int current1 = acs1.getCurrent();
   int current2 = acs2.getCurrent();
   int current3 = acs3.getCurrent();
   int current4 = acs4.getCurrent();
   Voltage = voltage.getVoltage();
 
+  //Check for glitches
   if(Current1 - current1 > 5){
+    //Smooth out the glitches
     Current1 -=5;
-  } else if(current1 - Current1 > 5){
+  } 
+  //Check for glitches in negative direction
+  else if(current1 - Current1 > 5){
+    //Again smooth out glitches
     Current1 +=5;
-  } else{
+  }
+  //If no glitches 
+  else{
+    //Store current1 to permanent variable
     Current1 = current1;
   }
 
+  //Check for glitches
   if(Current2 - current2 > 5){
+    //Smooth out glitches
     Current2 -=5;
-  } else if(current2 - Current2 > 5){
+  } 
+  //Check for glitches in negative direction
+  else if(current2 - Current2 > 5){
+    //Again smooth out glitches
     Current2 +=5;
-  } else{
+  }
+  //If no glitches 
+  else{
+    //Store current2 to permanent variable
     Current2 = current2;
   }
 
+  //Check for glitches
   if(Current3 - current3 > 5){
+    //Smooth out glitches
     Current3 -=5;
-  } else if(current3 - Current3 > 5){
+  } 
+  //Check for glitches in negative direction
+  else if(current3 - Current3 > 5){
+    //Again smooth out glitches
     Current3 +=5;
-  } else{
+  } 
+  //If no glitches
+  else{
+    //Store current3 to permanent variable
     Current3 = current3;
   }
 
+  //Check for glitches
   if(Current4 - current4 > 5){
+    //Smooth out glitches
     Current4 -=5;
-  } else if(current4 - Current4 > 5){
+  } 
+  //Check for glitches in negative direction
+  else if(current4 - Current4 > 5){
+    //Again smooth out glitches
     Current4 +=5;
-  } else{
+  } 
+  //If no glitches
+  else{
+    //Store current4 to permanent variable
     Current4 = current4;
   }
 
+  //Update total current
   Current = Current1+Current2+Current3+Current4;
+  //Update total power
   Power = (int)(Voltage*Current/10);
 
 }
