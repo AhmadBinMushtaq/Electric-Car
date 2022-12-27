@@ -6,5 +6,5 @@ Voltage_Sensor::Voltage_Sensor(int pin, int maxV){
 }
 
 double Voltage_Sensor::getVoltage(){
-    return (double) (map(analogRead(this->_pin),0,4096,0,this->_maxV));
+    return (double) (map(analogRead(this->_pin),0,4096,this->_maxV*-0.5,this->_maxV*0.5));
 }

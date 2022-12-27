@@ -1,63 +1,89 @@
+//Include required libraries
+
+//Arduino header file 
+//to use the arduino specific functions.
 #include <Arduino.h>
+//Customized ESC library 
+//to output speed signal to ESC as a PWM.
 #include <ESC.h>
+//Customized Current Sensor library 
+//to get the value of current from sensors.
 #include <ACS712.h>
+//Customized voltage sensor library 
+//to get values of voltage from voltage sensor.
 #include <Voltage_Sensor.h>
+//Customized GPS library 
+//to get longitude and latitude values from GPS module.
 #include <GPS.h>
 
 
 // Pin Definitions
-
+//Flysky Reciever pins
 #define RXPin1 2
 #define RXPin2 4
 #define RXPin3 5
 #define RXPin4 18
 #define RXPin5 19
 
+//0-25V Voltmeter pin
 #define VoltmeterPin 15
+//Max voltage of voltmeter
 #define MaxVoltage 25
 
+//Servo pin for steering
 #define SteeringPin 23
 
+//Pins for current sensors
 #define ACS1Pin 35
+#define ACS2Pin 34
+#define ACS3Pin 26
+#define ACS4Pin 25
+
+//Slopes and offset of current sensors
+//for calculating the current from input analog values
 #define ACS1Slope 22.3971
 #define ACS1Offset -37.2174
-
-#define ACS2Pin 34
 #define ACS2Slope 22.3757
 #define ACS2Offset -37.2776
-
-#define ACS3Pin 26
 #define ACS3Slope 9.04405
 #define ACS3Offset -14.3177
-
-#define ACS4Pin 25
 #define ACS4Slope 9.04405
 #define ACS4Offset -15.3177
 
+//Pin connected to brake servo
 #define BrakePin 33
 
+//Pin connected to IR Tachometer
 #define SpeedometerPin 32
 #define Circumference 455
 
-
+//Pins connected to Electronic Speed controller
+//of all the BLDC motors
 #define MotorPin1 27
 #define MotorPin2 14
 #define MotorPin3 12
 #define MotorPin4 13
 
 //I2C Addresses
-
+//for different sensors
+//MPU6050 address. (Triple axis Accelerometer + Gyroscope)
 #define MPU6050Address 0x68
-
+//HMC5883L address. (Triple axis Compass/Magnetometer)
 #define HMC5883LAddress 0x0D
-
+//BME280 address. (Environment Sensor. Temperature + Humidity + Altitude + Pressure)
 #define BME280Address 0x76
 
+//Define Constant values for processing
+//Min. Duty Cycle for PWM input of receiver
 #define RXMinDuty 1000
+//Max. Duty Cycle for PWM input of receiver
 #define RXMaxDuty 2000
 
+//Min. Duty Cycle for PWM input of ESC for BLDC motors
 #define MotorMinDuty 1000
+//Max. Duty Cycle for PWM input of ESC for BLDC motors
 #define MotorMaxDuty 2000
+
 
 #define SteeringMinDuty 500
 #define SteeringMaxDuty 2500
@@ -65,6 +91,7 @@
 #define BrakeMinDuty 1000
 #define BrakeMaxDuty 2000
 
+//Declare Interrupt variables
 volatile unsigned long last_time = 0;
 volatile double speed = 0;
 int velocity = 0;
@@ -94,6 +121,7 @@ volatile long current_time5 = 0;
 volatile long pulses5 = 0;
 int PulseWidth5 = 0;
 
+//Declare remaining variables
 int motorSpeed = 0;
 
 int Current = 0;
@@ -106,21 +134,32 @@ double Voltage = 0;
 
 int Power = 0;
 
+//Create 4 objects of ESC class for Electronic Speed control of BLDC motors
 ESC motor1(MotorPin1, MotorMinDuty, MotorMaxDuty);
 ESC motor2(MotorPin2, MotorMinDuty, MotorMaxDuty);
 ESC motor3(MotorPin3, MotorMinDuty, MotorMaxDuty);
 ESC motor4(MotorPin4, MotorMinDuty, MotorMaxDuty);
+
+//Create 4 objects of ACS712 class for 30A Current Sensors
 ACS712 acs1(ACS1Pin, ACS1Slope, ACS1Offset);
 ACS712 acs2(ACS2Pin, ACS2Slope, ACS2Offset);
 ACS712 acs3(ACS3Pin, ACS3Slope, ACS3Offset);
 ACS712 acs4(ACS4Pin, ACS4Slope, ACS4Offset);
+
+//Create an object of Voltage_Sensor class for 0-25V voltage sensor
 Voltage_Sensor voltage(VoltmeterPin, MaxVoltage);
+
+//Object of ESC class for servo motors in brakes and steering
 ESC brake(BrakePin, BrakeMinDuty, BrakeMaxDuty);
 ESC steering(SteeringPin, SteeringMinDuty, SteeringMaxDuty);
 
+
+//Create two tasks for separate cores of Xtensa LX6
 TaskHandle_t Task1;
 TaskHandle_t Task2;
 
+
+//Interrupt functions
 portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 
 void IRAM_ATTR SpeedInterrupt() {
@@ -187,6 +226,7 @@ void IRAM_ATTR RXInterrupt5() {
   portEXIT_CRITICAL_ISR(&mux);
 }
 
+//Store the Reciever inputs from volatile variables to permanent variables
 void updateRX(){
   if (pulses1 < 2100){
     PulseWidth1 = map(constrain(pulses1, RXMinDuty, RXMaxDuty), RXMinDuty, RXMaxDuty, 0, 100);
@@ -224,7 +264,7 @@ void updateRX(){
   }
 }
 
-
+//Store the value of speed from volatile variable to permanent variable for processing
 void updateVelocity(){
   if(millis()-last_time>500){
     velocity = 0;
@@ -239,6 +279,8 @@ void updateVelocity(){
     velocity = speed;
   }
 }
+
+//Update the values of Voltage, Current and Power by updating Current & voltage sensor and adding the formula for power
 
 void updatePower(){
   // Current1 = 0;
@@ -298,6 +340,8 @@ void updatePower(){
 
 }
 
+//Update the signal going towards BLDC ESC to update speed of each motor.
+//Update pulsewidth going to steering pin to update direction of steering.
 void updateSpeed(){
   motorSpeed = PulseWidth3;
 
@@ -320,6 +364,7 @@ void updateSpeed(){
 
 }
 
+//Attach interrupts to their respective functions
 void attachInterrupt(){
   attachInterrupt(digitalPinToInterrupt(SpeedometerPin), SpeedInterrupt, RISING);
   // Serial.println("Speedometer Connected");
@@ -331,6 +376,8 @@ void attachInterrupt(){
   // Serial.println("Reciever channels connected");
 }
 
+//Safe Mode: When rebooted, the vehicle will be disarmed until specified inputs are recieved from the
+//Remote control in order to ensure the safety and avoid glitches in car performance
 void safeMode(){
   motor1.write(0);
   motor2.write(0);
@@ -364,6 +411,7 @@ void safeMode(){
 
 }
 
+// Sends data to HC12 for real-time data plotting
 void send(){
     Serial.print(velocity);
     Serial.print(",");
@@ -378,7 +426,7 @@ void send(){
 
 }
 
-//Task1code: blinks an LED every 1000 ms
+//Task 1 pinned to core0. Mainly for communication interrupts of reciever and speedometer.
 void Task1code( void * pvParameters ){
   // Serial.print("Task1 running on core ");
   // Serial.println(xPortGetCoreID());
@@ -404,7 +452,7 @@ void Task1code( void * pvParameters ){
   } 
 }
 
-//Task2code: blinks an LED every 700 ms
+//Task2code pinned to core1. Mainly for control loop and outputs.
 void Task2code( void * pvParameters ){
   // Serial.print("Task2 running on core ");
   // Serial.println(xPortGetCoreID());
@@ -412,6 +460,8 @@ void Task2code( void * pvParameters ){
 
   for(;;){
     updatePower();
+
+    // Serial.println(Voltage);
 
     // Serial.print(Current1,1);
     // Serial.print("    ");
@@ -439,6 +489,7 @@ void Task2code( void * pvParameters ){
   }
 }
 
+//Setup code to set the pinModes and pin the tasks to specific cores when ESP32 reboots.
 void setup() {
   Serial.begin(9600);
   pinMode(SpeedometerPin, INPUT_PULLDOWN);
@@ -471,6 +522,8 @@ void setup() {
     delay(500); 
 }
 
+
+//Empty loop function.
 void loop() {
   
 }
