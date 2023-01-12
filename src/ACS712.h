@@ -4,7 +4,8 @@
 #pragma once
 #include "Arduino.h"
 
-class ACS712{
+class ACS712
+{
 
 public:
     ACS712(byte pin, double slope, double offset);
@@ -15,7 +16,6 @@ private:
     byte _pin;
     double _slope;
     double _offset;
-
 };
 
 #endif

@@ -4,7 +4,8 @@
 #pragma once
 #include "Arduino.h"
 
-class Voltage_Sensor{
+class Voltage_Sensor
+{
 
 public:
     Voltage_Sensor(int, int);
